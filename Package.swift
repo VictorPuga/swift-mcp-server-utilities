@@ -15,10 +15,6 @@ let package = Package(
             targets: ["ScalekitAuth"]
         ),
         .library(
-            name: "ScalekitAuthVapor",
-            targets: ["ScalekitAuthVapor"]
-        ),
-        .library(
             name: "GoogleCloudAuth",
             targets: ["GoogleCloudAuth"]
         ),
@@ -29,7 +25,6 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.1"),
-        .package(url: "https://github.com/vapor/vapor.git", from: "4.115.0"),
         .package(url: "https://github.com/vapor/jwt-kit.git", from: "5.0.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.1"),
     ],
@@ -41,13 +36,6 @@ let package = Package(
             dependencies: [
                 .product(name: "JWTKit", package: "jwt-kit"),
                 .product(name: "MCP", package: "swift-sdk"),
-            ]
-        ),
-        .target(
-            name: "ScalekitAuthVapor",
-            dependencies: [
-                "ScalekitAuth",
-                .product(name: "Vapor", package: "vapor"),
             ]
         ),
         .target(

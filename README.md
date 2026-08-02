@@ -2,15 +2,14 @@
 
 A collection of small, framework-agnostic Swift packages for building server-side apps on Google
 Cloud Run behind Scalekit-authenticated MCP endpoints.
-Each module is independent — depend on only the ones you need.
+Each module is independent — depend on only the ones you need. No Vapor/Hummingbird dependency —
+consumers bring their own web-framework adapter (e.g. a Vapor `AsyncMiddleware`).
 
 ## Modules
 
 - **[ScalekitAuth](Sources/ScalekitAuth/ScalekitAuth.docc/ScalekitAuth.md)** — verifies
   Scalekit-issued Bearer tokens locally against the environment's JWKS. No Vapor/Hummingbird
   coupling.
-- **[ScalekitAuthVapor](Sources/ScalekitAuthVapor/ScalekitAuthVapor.docc/ScalekitAuthVapor.md)** —
-  a ready-to-use Vapor `AsyncMiddleware` wrapping `ScalekitAuth`.
 - **[GoogleCloudAuth](Sources/GoogleCloudAuth/GoogleCloudAuth.docc/GoogleCloudAuth.md)** — mints
   OAuth2 access tokens for a GCP service account, generic over scope. Uses the Cloud Run metadata
   server when running on Cloud Run (`K_SERVICE` set), or a local service-account key otherwise.
