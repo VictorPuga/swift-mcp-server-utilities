@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "SwiftServerUtilities",
+    name: "SwiftMCPServerUtilities",
     platforms: [
         .macOS(.v15)
     ],

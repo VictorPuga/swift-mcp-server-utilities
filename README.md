@@ -1,4 +1,4 @@
-# SwiftServerUtilities
+# SwiftMCPServerUtilities
 
 A collection of small, framework-agnostic Swift packages for building server-side apps on Google
 Cloud Run behind Scalekit-authenticated MCP endpoints.
@@ -22,16 +22,16 @@ consumers bring their own web-framework adapter (e.g. a Vapor `AsyncMiddleware`)
 Add as a package dependency:
 
 ```swift
-.package(url: "https://github.com/VictorPuga/swift-server-utilities.git", from: "1.0.0"),
+.package(url: "https://github.com/VictorPuga/swift-mcp-server-utilities.git", from: "1.0.0"),
 ```
 
 or, for local development against a sibling checkout:
 
 ```swift
-.package(path: "../swift-server-utilities"),
+.package(path: "../swift-mcp-server-utilities"),
 ```
 
-then add the products you need to a target's dependencies, e.g. `.product(name: "ScalekitAuth", package: "swift-server-utilities")`.
+then add the products you need to a target's dependencies, e.g. `.product(name: "ScalekitAuth", package: "swift-mcp-server-utilities")`.
 
 ## Documentation
 
