@@ -20,6 +20,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   server, or a local service-account key), generic over scope.
 - **`GCPSecretManager`** — a minimal REST client over Google Secret Manager, built on
   `GoogleCloudAuth`.
+- **`GCPFirestore`** — a minimal REST client over Google Cloud Firestore, built on
+  `GoogleCloudAuth`. Generic over project, database, and collection.
 
 Every module is caller-configured (no hardcoded project IDs, scopes, or env-var names) so it stays
 reusable across consuming apps — see each consumer's own `CLAUDE.md`/`README.md` for how it wires

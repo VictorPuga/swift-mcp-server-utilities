@@ -22,6 +22,10 @@ let package = Package(
             name: "GCPSecretManager",
             targets: ["GCPSecretManager"]
         ),
+        .library(
+            name: "GCPFirestore",
+            targets: ["GCPFirestore"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.1"),
@@ -50,6 +54,12 @@ let package = Package(
                 "GoogleCloudAuth"
             ]
         ),
+        .target(
+            name: "GCPFirestore",
+            dependencies: [
+                "GoogleCloudAuth"
+            ]
+        ),
         .testTarget(
             name: "ScalekitAuthTests",
             dependencies: ["ScalekitAuth"]
@@ -64,6 +74,10 @@ let package = Package(
         .testTarget(
             name: "GCPSecretManagerTests",
             dependencies: ["GCPSecretManager"]
+        ),
+        .testTarget(
+            name: "GCPFirestoreTests",
+            dependencies: ["GCPFirestore"]
         ),
     ],
     swiftLanguageModes: [.v6]

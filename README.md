@@ -16,6 +16,9 @@ consumers bring their own web-framework adapter (e.g. a Vapor `AsyncMiddleware`)
 - **[GCPSecretManager](Sources/GCPSecretManager/GCPSecretManager.docc/GCPSecretManager.md)** — a
   minimal REST client over Google Secret Manager, built on `GoogleCloudAuth`. Never creates a
   secret container — the operator precreates each secret ahead of time.
+- **[GCPFirestore](Sources/GCPFirestore/GCPFirestore.docc/GCPFirestore.md)** — a minimal REST
+  client over Google Cloud Firestore, built on `GoogleCloudAuth`. Generic over project, database,
+  and collection — no collection names or document shapes are hardcoded.
 
 ## Installation
 
