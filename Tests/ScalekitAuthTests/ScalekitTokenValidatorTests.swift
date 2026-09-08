@@ -34,13 +34,15 @@ private struct TestKeyFixture {
         sub: String = "user-1",
         iss: String? = nil,
         aud: String? = nil,
-        expiresIn: TimeInterval = 3600
+        expiresIn: TimeInterval = 3600,
+        scope: String? = nil
     ) async throws -> String {
         let payload = ScalekitAccessTokenPayload(
             iss: .init(value: iss ?? environmentURL),
             sub: .init(value: sub),
             aud: .init(value: [aud ?? resourceID]),
-            exp: .init(value: Date().addingTimeInterval(expiresIn))
+            exp: .init(value: Date().addingTimeInterval(expiresIn)),
+            scope: scope
         )
         return try await signingKeys.sign(payload, kid: "test-key")
     }
@@ -61,6 +63,28 @@ struct ScalekitTokenValidatorTests {
         let payload = try await validator.validate(token: token)
 
         #expect(payload.sub.value == "user-1")
+    }
+
+    @Test("decodes a granted scope claim")
+    func decodesScopeClaim() async throws {
+        let fixture = try await TestKeyFixture.make()
+        let token = try await fixture.sign(scope: "issues:read pages:write")
+
+        let validator = ScalekitTokenValidator(environmentURL: fixture.environmentURL, resourceID: fixture.resourceID)
+        let payload = try await validator.validate(token: token)
+
+        #expect(payload.scope == "issues:read pages:write")
+    }
+
+    @Test("decodes a missing scope claim as nil")
+    func decodesMissingScopeClaimAsNil() async throws {
+        let fixture = try await TestKeyFixture.make()
+        let token = try await fixture.sign()
+
+        let validator = ScalekitTokenValidator(environmentURL: fixture.environmentURL, resourceID: fixture.resourceID)
+        let payload = try await validator.validate(token: token)
+
+        #expect(payload.scope == nil)
     }
 
     @Test("rejects an expired token")

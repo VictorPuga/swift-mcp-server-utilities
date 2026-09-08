@@ -11,6 +11,9 @@ public struct ScalekitAccessTokenPayload: JWTPayload {
     public let sub: SubjectClaim
     public let aud: AudienceClaim
     public let exp: ExpirationClaim
+    /// Space-delimited OAuth scopes granted to this token (e.g. `"issues:read pages:write"`),
+    /// or `nil` if none were granted.
+    public let scope: String? = nil
 
     public func verify(using algorithm: some JWTAlgorithm) throws {
         try exp.verifyNotExpired()
