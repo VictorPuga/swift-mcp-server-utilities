@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **`ScalekitAuth`** — framework-agnostic Scalekit JWT/JWKS Bearer-token validation. No
   Vapor/Hummingbird dependency, and this package has none either — web-framework adapters (e.g.
-  a Vapor `AsyncMiddleware`) live in the consuming app instead (see the consuming app).
+  a Vapor `AsyncMiddleware`) live in the consuming app instead.
 - **`GoogleCloudAuth`** — mints OAuth2 access tokens for a GCP service account (Cloud Run metadata
   server, or a local service-account key), generic over scope.
 - **`GCPSecretManager`** — a minimal REST client over Google Secret Manager, built on
@@ -24,12 +24,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   `GoogleCloudAuth`. Generic over project, database, and collection.
 
 Every module is caller-configured (no hardcoded project IDs, scopes, or env-var names) so it stays
-reusable across consuming apps — see each consumer's own `CLAUDE.md`/`README.md` for how it wires
-these together (e.g. the consuming app).
-
-## History
-
-`ScalekitAuth`, `GoogleCloudAuth`, and `GCPSecretManager` were migrated here from
-a private project (moved with `mv`, `git blame` history not preserved) so they can be shared by
-other server-side Swift projects. `ScalekitAuthVapor` was migrated too but moved back to the consuming app so
-this package would have no Vapor dependency.
+reusable across consuming apps — each consumer wires them together in its own code and docs.
