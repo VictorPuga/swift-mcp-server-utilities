@@ -7,6 +7,9 @@ public enum FirestoreWrite: Sendable {
     case set(collection: String, documentId: String, fields: [String: FirestoreValue])
     /// Creates a document; the commit fails with `GCPFirestoreError.alreadyExists` if it exists.
     case create(collection: String, documentId: String, fields: [String: FirestoreValue])
+    /// Replaces a document only if its `updateTime` still equals `ifUpdateTime` (optimistic concurrency).
+    /// The commit fails with `GCPFirestoreError.preconditionFailed` when the document changed or is missing.
+    case update(collection: String, documentId: String, fields: [String: FirestoreValue], ifUpdateTime: String)
     /// Deletes a document. A missing document is a no-op.
     case delete(collection: String, documentId: String)
 }
@@ -17,7 +20,10 @@ struct CommitRequest: Encodable {
 
 extension FirestoreWrite {
     struct Wire: Encodable {
-        struct Precondition: Encodable { let exists: Bool }
+        struct Precondition: Encodable {
+            var exists: Bool?
+            var updateTime: String?
+        }
         struct Document: Encodable {
             let name: String
             let fields: [String: FirestoreValue]
@@ -39,6 +45,10 @@ extension FirestoreWrite {
             return Wire(
                 update: .init(name: name(collection, documentId), fields: fields),
                 currentDocument: .init(exists: false))
+        case .update(let collection, let documentId, let fields, let updateTime):
+            return Wire(
+                update: .init(name: name(collection, documentId), fields: fields),
+                currentDocument: .init(updateTime: updateTime))
         case .delete(let collection, let documentId):
             return Wire(delete: name(collection, documentId))
         }

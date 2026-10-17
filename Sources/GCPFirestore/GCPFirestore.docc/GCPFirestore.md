@@ -49,6 +49,11 @@ try await client.commit([
     .delete(collection: "my-collection", documentId: "b"),
 ])
 
+// Optimistic concurrency: fails with `.preconditionFailed` if the document changed since `document.updateTime`.
+try await client.commit([
+    .update(collection: "my-collection", documentId: "a", fields: [:], ifUpdateTime: document!.updateTime!)
+])
+
 let matches = try await client.runQuery(
     collection: "my-collection",
     filters: [FirestoreQueryFilter(field: "someField", op: .equal, value: .string("some-value"))]

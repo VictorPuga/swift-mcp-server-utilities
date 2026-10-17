@@ -298,3 +298,34 @@ struct GCPFirestoreClientWriteTests {
         }
     }
 }
+
+@Suite("GCPFirestoreClient preconditions")
+struct GCPFirestoreClientPreconditionTests {
+    private static let tokenProvider = FakeTokenProvider(token: "test-access-token")
+
+    @Test("commit encodes an update with an updateTime precondition")
+    func updateEncodesPrecondition() async throws {
+        let session = MockURLProtocol.makeSession { request in
+            let json = try JSONSerialization.jsonObject(with: bodyData(of: request)) as? [String: Any]
+            let write = (json?["writes"] as? [[String: Any]])?.first
+            let precondition = write?["currentDocument"] as? [String: Any]
+            #expect(precondition?["updateTime"] as? String == "2026-01-01T00:00:00.000000Z")
+            #expect(precondition?["exists"] == nil)
+            return (200, Data("{}".utf8))
+        }
+        let client = GCPFirestoreClient(projectId: "p", tokenProvider: Self.tokenProvider, urlSession: session)
+        try await client.commit([
+            .update(collection: "c", documentId: "a", fields: [:], ifUpdateTime: "2026-01-01T00:00:00.000000Z")
+        ])
+    }
+
+    @Test("commit maps FAILED_PRECONDITION and ABORTED to preconditionFailed")
+    func preconditionFailures() async throws {
+        let write = FirestoreWrite.update(collection: "c", documentId: "a", fields: [:], ifUpdateTime: "t")
+        for (status, body) in [(400, "{\"error\":{\"status\":\"FAILED_PRECONDITION\"}}"), (409, "{\"error\":{\"status\":\"ABORTED\"}}")] {
+            let session = MockURLProtocol.makeSession { _ in (status, Data(body.utf8)) }
+            let client = GCPFirestoreClient(projectId: "p", tokenProvider: Self.tokenProvider, urlSession: session)
+            await #expect(throws: GCPFirestoreError.preconditionFailed) { try await client.commit([write]) }
+        }
+    }
+}

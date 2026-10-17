@@ -8,6 +8,8 @@ public enum GCPFirestoreError: Error, Sendable, Equatable {
     case requestFailed(status: Int, body: String)
     /// A create-only write hit a document that already exists.
     case alreadyExists
+    /// A write's `updateTime` precondition did not hold, or the commit was aborted by contention. Re-read and retry.
+    case preconditionFailed
 }
 
 /// A page of documents returned by `GCPFirestoreClient/listDocuments`.
@@ -124,7 +126,7 @@ public struct GCPFirestoreClient: Sendable {
         let body = try JSONEncoder().encode(CommitRequest(writes: writes.map { $0.wire(documentsPath: prefix) }))
         let url = URL(string: documentsURL.absoluteString + ":commit")!
         let (data, response) = try await send(url: url, method: "POST", body: body)
-        try Self.throwIfAlreadyExists(response)
+        try Self.throwIfAlreadyExists(response, body: data)
         guard (200..<300).contains(response.statusCode) else {
             throw GCPFirestoreError.requestFailed(status: response.statusCode, body: String(decoding: data, as: UTF8.self))
         }
@@ -195,8 +197,18 @@ public struct GCPFirestoreClient: Sendable {
         return try JSONDecoder().decode([RunQueryResponse].self, from: data).compactMap(\.document)
     }
 
-    private static func throwIfAlreadyExists(_ response: HTTPURLResponse) throws {
-        if response.statusCode == 409 { throw GCPFirestoreError.alreadyExists }
+    private static func throwIfAlreadyExists(_ response: HTTPURLResponse, body: Data = Data()) throws {
+        let text = String(decoding: body, as: UTF8.self)
+        switch response.statusCode {
+        case 409 where text.contains("ABORTED"):
+            throw GCPFirestoreError.preconditionFailed
+        case 409:
+            throw GCPFirestoreError.alreadyExists
+        case 400 where text.contains("FAILED_PRECONDITION"), 404 where text.contains("NOT_FOUND") && !text.isEmpty:
+            throw GCPFirestoreError.preconditionFailed
+        default:
+            return
+        }
     }
 
     private func documentURL(collection: String, documentId: String) -> URL {
