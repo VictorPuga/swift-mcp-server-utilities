@@ -32,6 +32,20 @@ public indirect enum FirestoreValue: Equatable, Sendable {
         return nil
     }
 
+    /// A `.timestamp` for `date`, in RFC 3339 UTC with millisecond precision.
+    public static func date(_ date: Date) -> FirestoreValue {
+        .timestamp(date.formatted(Self.timestampStyle))
+    }
+
+    /// The `Date` of a `.timestamp` value, or `nil` for other cases or unparsable text.
+    public var dateValue: Date? {
+        guard case .timestamp(let value) = self else { return nil }
+        return try? Date(value, strategy: Self.timestampParseStrategy)
+    }
+
+    private static let timestampStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+    private static let timestampParseStrategy = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+
     public var mapValue: [String: FirestoreValue]? {
         if case .map(let value) = self { return value }
         return nil

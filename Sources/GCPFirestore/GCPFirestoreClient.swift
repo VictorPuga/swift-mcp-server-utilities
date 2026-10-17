@@ -4,8 +4,10 @@ import Foundation
 #endif
 import GoogleCloudAuth
 
-public enum GCPFirestoreError: Error, Sendable {
+public enum GCPFirestoreError: Error, Sendable, Equatable {
     case requestFailed(status: Int, body: String)
+    /// A create-only write hit a document that already exists.
+    case alreadyExists
 }
 
 /// A page of documents returned by `GCPFirestoreClient/listDocuments`.
@@ -96,6 +98,38 @@ public struct GCPFirestoreClient: Sendable {
         return try JSONDecoder().decode(FirestoreDocument.self, from: data)
     }
 
+    /// Creates a document, failing with ``GCPFirestoreError/alreadyExists`` if `documentId` is already taken.
+    @discardableResult
+    public func createDocument(
+        collection: String, documentId: String, fields: [String: FirestoreValue]
+    ) async throws -> FirestoreDocument {
+        var components = URLComponents(
+            url: documentURL(collection: collection, documentId: documentId), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "currentDocument.exists", value: "false")]
+
+        let body = try JSONEncoder().encode(FirestoreDocument(fields: fields))
+        let (data, response) = try await send(url: components.url!, method: "PATCH", body: body)
+        try Self.throwIfAlreadyExists(response)
+        guard (200..<300).contains(response.statusCode) else {
+            throw GCPFirestoreError.requestFailed(status: response.statusCode, body: String(decoding: data, as: UTF8.self))
+        }
+        return try JSONDecoder().decode(FirestoreDocument.self, from: data)
+    }
+
+    /// Applies `writes` atomically: either all take effect or none do.
+    /// Throws ``GCPFirestoreError/alreadyExists`` if any ``FirestoreWrite/create(collection:documentId:fields:)`` collides.
+    public func commit(_ writes: [FirestoreWrite]) async throws {
+        guard !writes.isEmpty else { return }
+        let prefix = "projects/\(projectId)/databases/\(databaseId)/documents"
+        let body = try JSONEncoder().encode(CommitRequest(writes: writes.map { $0.wire(documentsPath: prefix) }))
+        let url = URL(string: documentsURL.absoluteString + ":commit")!
+        let (data, response) = try await send(url: url, method: "POST", body: body)
+        try Self.throwIfAlreadyExists(response)
+        guard (200..<300).contains(response.statusCode) else {
+            throw GCPFirestoreError.requestFailed(status: response.statusCode, body: String(decoding: data, as: UTF8.self))
+        }
+    }
+
     /// Idempotent: a missing document is treated as a successful delete.
     public func deleteDocument(collection: String, documentId: String) async throws {
         let url = documentURL(collection: collection, documentId: documentId)
@@ -159,6 +193,10 @@ public struct GCPFirestoreClient: Sendable {
 
         struct RunQueryResponse: Decodable { var document: FirestoreDocument? }
         return try JSONDecoder().decode([RunQueryResponse].self, from: data).compactMap(\.document)
+    }
+
+    private static func throwIfAlreadyExists(_ response: HTTPURLResponse) throws {
+        if response.statusCode == 409 { throw GCPFirestoreError.alreadyExists }
     }
 
     private func documentURL(collection: String, documentId: String) -> URL {

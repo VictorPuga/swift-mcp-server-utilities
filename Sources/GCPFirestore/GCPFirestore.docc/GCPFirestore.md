@@ -40,6 +40,15 @@ try await client.patchDocument(
     updateMask: ["someField"]
 )
 
+// Create-only: throws `GCPFirestoreError.alreadyExists` if the ID is taken.
+try await client.createDocument(collection: "my-collection", documentId: "new-id", fields: [:])
+
+// Atomic multi-document write.
+try await client.commit([
+    .create(collection: "my-collection", documentId: "a", fields: [:]),
+    .delete(collection: "my-collection", documentId: "b"),
+])
+
 let matches = try await client.runQuery(
     collection: "my-collection",
     filters: [FirestoreQueryFilter(field: "someField", op: .equal, value: .string("some-value"))]
@@ -53,6 +62,7 @@ let matches = try await client.runQuery(
 - ``GCPFirestoreClient``
 - ``GCPFirestoreError``
 - ``DocumentPage``
+- ``FirestoreWrite``
 
 ### Documents
 

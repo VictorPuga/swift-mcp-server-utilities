@@ -237,3 +237,64 @@ final class Locked<Value>: @unchecked Sendable {
     var value: Value { lock.withLock { _value } }
     func set(_ newValue: Value) { lock.withLock { _value = newValue } }
 }
+
+@Suite("GCPFirestoreClient writes")
+struct GCPFirestoreClientWriteTests {
+    private static let tokenProvider = FakeTokenProvider(token: "test-access-token")
+
+    @Test("createDocument PATCHes with currentDocument.exists=false")
+    func createDocumentSendsPrecondition() async throws {
+        let session = MockURLProtocol.makeSession { request in
+            #expect(request.httpMethod == "PATCH")
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            #expect(query.contains(URLQueryItem(name: "currentDocument.exists", value: "false")))
+            return (200, Data("{\"name\":\"projects/p/databases/(default)/documents/c/a\",\"fields\":{}}".utf8))
+        }
+        let client = GCPFirestoreClient(projectId: "p", tokenProvider: Self.tokenProvider, urlSession: session)
+        let document = try await client.createDocument(collection: "c", documentId: "a", fields: [:])
+        #expect(document.documentID == "a")
+    }
+
+    @Test("createDocument maps 409 to alreadyExists")
+    func createDocumentConflict() async throws {
+        let session = MockURLProtocol.makeSession { _ in (409, Data("{}".utf8)) }
+        let client = GCPFirestoreClient(projectId: "p", tokenProvider: Self.tokenProvider, urlSession: session)
+        await #expect(throws: GCPFirestoreError.alreadyExists) {
+            try await client.createDocument(collection: "c", documentId: "a", fields: [:])
+        }
+    }
+
+    @Test("commit POSTs set, create and delete writes to :commit")
+    func commitEncodesWrites() async throws {
+        let session = MockURLProtocol.makeSession { request in
+            #expect(request.httpMethod == "POST")
+            #expect(request.url?.absoluteString.hasSuffix("/documents:commit") == true)
+            let json = try JSONSerialization.jsonObject(with: bodyData(of: request)) as? [String: Any]
+            let writes = json?["writes"] as? [[String: Any]] ?? []
+            #expect(writes.count == 3)
+            let prefix = "projects/p/databases/(default)/documents"
+            let set = writes[0]["update"] as? [String: Any]
+            #expect(set?["name"] as? String == "\(prefix)/c/a")
+            #expect(writes[0]["currentDocument"] == nil)
+            #expect((writes[1]["currentDocument"] as? [String: Any])?["exists"] as? Bool == false)
+            #expect(writes[2]["delete"] as? String == "\(prefix)/c/b%20c")
+            return (200, Data("{}".utf8))
+        }
+        let client = GCPFirestoreClient(projectId: "p", tokenProvider: Self.tokenProvider, urlSession: session)
+        try await client.commit([
+            .set(collection: "c", documentId: "a", fields: ["x": .integer(1)]),
+            .create(collection: "c", documentId: "n", fields: [:]),
+            .delete(collection: "c", documentId: "b c"),
+        ])
+    }
+
+    @Test("commit maps 409 to alreadyExists and skips empty batches")
+    func commitConflictAndEmpty() async throws {
+        let session = MockURLProtocol.makeSession { _ in (409, Data("{}".utf8)) }
+        let client = GCPFirestoreClient(projectId: "p", tokenProvider: Self.tokenProvider, urlSession: session)
+        try await client.commit([])
+        await #expect(throws: GCPFirestoreError.alreadyExists) {
+            try await client.commit([.create(collection: "c", documentId: "a", fields: [:])])
+        }
+    }
+}

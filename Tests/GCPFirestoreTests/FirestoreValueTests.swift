@@ -55,3 +55,19 @@ struct FirestoreValueTests {
         #expect(document.documentID == nil)
     }
 }
+
+@Suite("FirestoreValue dates")
+struct FirestoreValueDateTests {
+    @Test("date(_:) round-trips through dateValue at millisecond precision")
+    func dateRoundTrip() {
+        let date = Date(timeIntervalSince1970: 1_700_000_000.123)
+        let value = FirestoreValue.date(date)
+        #expect(value.dateValue.map { abs($0.timeIntervalSince(date)) < 0.001 } == true)
+    }
+
+    @Test("dateValue parses server timestamps with and without fractional seconds")
+    func dateParsing() {
+        #expect(FirestoreValue.timestamp("2024-01-02T03:04:05.123456Z").dateValue != nil)
+        #expect(FirestoreValue.string("x").dateValue == nil)
+    }
+}
