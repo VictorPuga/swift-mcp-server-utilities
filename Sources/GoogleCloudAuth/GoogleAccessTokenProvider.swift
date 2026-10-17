@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+    import FoundationNetworking
+#endif
 
 /// Mints OAuth2 access tokens for calling Google Cloud APIs as a GCP service account, scoped to
 /// whatever `scope` the caller needs (e.g. Secret Manager's `cloud-platform` scope).
